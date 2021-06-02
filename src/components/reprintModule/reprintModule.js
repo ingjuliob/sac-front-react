@@ -34,11 +34,13 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { red } from '@material-ui/core/colors';
+import Backdrop from '@material-ui/core/Backdrop';
 
 // icons
 import PrintIcon from '@material-ui/icons/Print';
 import SaveIcon from '@material-ui/icons/Save';
 import CloseIcon from '@material-ui/icons/Close';
+import AutorenewIcon from '@material-ui/icons/Autorenew';
 
 // services
 import BaseService from '../services/baseService';
@@ -55,16 +57,16 @@ const useStyles = makeStyles((theme) => ({
   divider: { marginTop: 25, marginBottom: 25 },
   formControl: { width: '95%' },
   selectEmpty: { marginTop: theme.spacing(2) },
-  button: {
-    margin: 10, marginTop: 25, marginBottom: 30, textTransform: 'capitalize', backgroundColor: '#DB0011',
-    borderRadius: '0'
-  },
+  button: { margin: 10, marginTop: 25, marginBottom: 30, textTransform: 'capitalize', backgroundColor: '#DB0011',
+            borderRadius: '0' },
+  buttonOutlined: { margin: 10, marginTop: 25, marginBottom: 30, textTransform: 'capitalize', color: '#DB0011',
+  borderRadius: '0' },
   alignItems: { textAlign: 'right' },
 
   // loading styles
-  wrapperLoading: { margin: theme.spacing(1), position: 'relative', display: 'flex', alignItems: 'center' },
-  buttonProgress: { color: red[500], position: 'absolute', top: '50%', left: '50%', marginTop: -12, marginLeft: -12,
-                    margin: theme.spacing(1), display: 'flex', alignItems: 'center' }
+  backdrop: { zIndex: theme.zIndex.drawer + 1, color: '#fff' },
+  buttonProgress: { color: red[500], position: 'absolute', top: '50%', left: '50%', margin: theme.spacing(1), 
+                    display: 'flex', alignItems: 'center' }
 
 }));
 
@@ -112,15 +114,15 @@ export default function CenteredGrid() {
   const [selectedSucursal, setSelectedSucursal] = React.useState('');
   const [tipo, setTipo] = React.useState("");
   const [open, setOpen] = React.useState(false);
+  const [resultRequest, setResultRequest] = React.useState("");
+  const [resultStatus, setResultStatus] = React.useState("");
   const [resultMsg, setResultMsg] = React.useState("");
-  const [resultMsg2, setResultMsg2] = React.useState("");
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
-  const [loading, setLoading] = React.useState(false);
-  const [success, setSuccess] = React.useState(false);
-  
+  const [loading, setLoading] = React.useState(true);
+
   const handleClose = () => { setOpen(false); };
-  
+
   // Ref variables
   let domicilioEmbozo = React.useRef(null);
   let domicilioCategoria = React.useRef(null);
@@ -142,6 +144,7 @@ export default function CenteredGrid() {
     ReprintService.getBranchDetails(operationId)
       .then(dataSucursales => {
         setSucursales(dataSucursales.branches);
+        setLoading(false);
       })
   }
 
@@ -153,6 +156,7 @@ export default function CenteredGrid() {
   // Handle onchange event (Paneles)
   const handleChange = (panel) => (event, newExpanded) => {
     if (panel === 'panelSucursal') { // Panel de Sucursal
+      setLoading(true);
       updateBranches();
       setSelectedDestino('SUCURSAL');
       setDisable(true);
@@ -169,6 +173,9 @@ export default function CenteredGrid() {
     let embozo = selectedDestino === 'DOMICILIO' ? domicilioEmbozo.current.outerText : sucursalEmbozo.current.outerText;
     let category = selectedDestino === 'DOMICILIO' ? domicilioCategoria.current.outerText : sucursalCategoria.current.outerText;
 
+    setDisable(true);
+    setLoading(true);
+
     BaseService.saveData(operationId, productCode, causeCode, companyCode, documentType, documentNumber, productNumber, origin,
       user, option, contactModeCode, reasonCode, responsibleSector, registerSector, initContact, closeContact, embozo,
       category, "-", selectedSucursal)
@@ -178,19 +185,11 @@ export default function CenteredGrid() {
         let mensaje = data.registration.message;
         let estado = data.registration.status;
         setOpen(true);
-        setResultMsg ('Se ha generado el pedido: ' + pedido + ' con estado ' + estado + '.');
-        setResultMsg2 (mensaje);
-        console.log('Se ha generado el pedido: ' + pedido + ' con estado ' + estado + '\n' + mensaje);
-      });
-
-    if (!loading) {
-      setSuccess(false);
-      setLoading(true);
-      timer.current = window.setTimeout(() => {
-        setSuccess(true);
+        setResultRequest(pedido);
+        setResultStatus(estado);
+        setResultMsg(mensaje);
         setLoading(false);
-      }, 1000);
-    }
+      });
   }
 
   // Funcion hook para consultar la ayuda al operador
@@ -212,6 +211,7 @@ export default function CenteredGrid() {
           ReprintService.getEmbozos(operationId, data.detalleTarjeta.reprint)
             .then(dataEmbozos => {
               setEmbozos(dataEmbozos.embozos);
+              setLoading(false);
             });
         })
     }
@@ -253,7 +253,7 @@ export default function CenteredGrid() {
 
       <Container maxWidth="lg">
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid item lg={12}>
             <Card className={classes.root} variant="outlined">
               <CardContent>
                 <Typography variant="h5" component="h2">
@@ -261,7 +261,7 @@ export default function CenteredGrid() {
                 </Typography>
                 <br></br>
                 <Grid container spacing={3}>
-                  <Grid item xs={5}>
+                  <Grid item lg={5}>
                     <Typography variant="caption" display="block" gutterBottom>
                       Apellido y Nombre
                     </Typography>
@@ -270,7 +270,7 @@ export default function CenteredGrid() {
                     </Typography>
                   </Grid>
 
-                  <Grid item xs={2}>
+                  <Grid item lg={2}>
                     <Typography variant="caption" display="block" gutterBottom>
                       Tipo y Nº de Documento
                     </Typography>
@@ -278,7 +278,7 @@ export default function CenteredGrid() {
                       {documentType} - {documentNumber}
                     </Typography>
                   </Grid>
-                  <Grid item xs={2.5}>
+                  <Grid item lg={2}>
                     <Typography variant="caption" display="block" gutterBottom>
                       Nº Banelco
                     </Typography>
@@ -286,7 +286,7 @@ export default function CenteredGrid() {
                       {productNumber}
                     </Typography>
                   </Grid>
-                  <Grid item xs={2}>
+                  <Grid item lg={2}>
                     <Typography variant="caption" display="block" gutterBottom>
                       Tipo Tarjeta
                     </Typography>
@@ -313,7 +313,7 @@ export default function CenteredGrid() {
                     </AccordionSummary>
                     <AccordionDetails>
                       <Grid container spacing={3}>
-                        <Grid item xs={2}>
+                        <Grid item lg={2}>
                           <Typography variant="caption" display="block" gutterBottom>
                             Domicilio
                           </Typography>
@@ -321,7 +321,7 @@ export default function CenteredGrid() {
 
                           </Typography>
                         </Grid>
-                        <Grid item xs={2}>
+                        <Grid item lg={2}>
                           <Typography variant="caption" display="block" gutterBottom>
                             Embozo
                           </Typography>
@@ -330,7 +330,7 @@ export default function CenteredGrid() {
                               <Typography key="domicilioEmbozo" ref={domicilioEmbozo} className={classes.pos} color="textSecondary">{fEmbozo.embozo}</Typography>))
                           }
                         </Grid>
-                        <Grid item xs={2}>
+                        <Grid item lg={2}>
                           <Typography variant="caption" display="block" gutterBottom>
                             Categoría
                           </Typography>
@@ -352,7 +352,7 @@ export default function CenteredGrid() {
                     </AccordionSummary>
                     <AccordionDetails>
                       <Grid container spacing={3}>
-                        <Grid item xs={3}>
+                        <Grid item lg={2} xs={6}>
                           <Typography variant="caption" display="block" gutterBottom>
                             Sucursal
                             </Typography>
@@ -363,7 +363,7 @@ export default function CenteredGrid() {
                             </Select>
                           </FormControl>
                         </Grid>
-                        <Grid item xs={2}>
+                        <Grid item lg={2}>
                           <Typography variant="caption" display="block" gutterBottom>
                             Embozo
                           </Typography>
@@ -372,7 +372,7 @@ export default function CenteredGrid() {
                               <Typography key="sucursalEmbozo" ref={sucursalEmbozo} className={classes.pos} color="textSecondary">{fEmbozo.embozo}</Typography>))
                           }
                         </Grid>
-                        <Grid item xs={2}>
+                        <Grid item lg={2}>
                           <Typography variant="caption" display="block" gutterBottom>
                             Categoría
                           </Typography>
@@ -396,30 +396,34 @@ export default function CenteredGrid() {
           </Grid>
         </Grid>
 
-          <Dialog fullScreen={fullScreen} open={open} onClose={handleClose} aria-labelledby="responsive-dialog-title">
-            <DialogTitle id="responsive-dialog-title">{"REGISTRACIÓN"}</DialogTitle>
-            <DialogContent>
-              <DialogContentText>
-                <Typography gutterBottom>
-                  {resultMsg}
-                </Typography>
-                <Typography gutterBottom>
-                  {resultMsg2}
-                </Typography>
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleClose} color="primary" autoFocus>
-                Cerrar x
-              </Button>
-            </DialogActions>
-          </Dialog>
+        <Dialog fullScreen={fullScreen} open={open} onClose={handleClose} aria-labelledby="responsive-dialog-title">
+          <DialogTitle id="responsive-dialog-title">{"REGISTRACIÓN"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              <Typography gutterBottom>
+                Se ha generado el pedido: <strong>{resultRequest}</strong> con estado <u><strong>{resultStatus}</strong></u>
+              </Typography>
+              <Typography gutterBottom>
+                {resultMsg}
+              </Typography>
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={saveData} variant="outlined" color="secondary" size="large" className={classes.buttonOutlined}
+                    startIcon={<AutorenewIcon />} style={{display: ( origin === 'SUCURSAL' && resultStatus !== 'Resuelto' ) ? 'inherit' : 'none'}}>Reintentar</Button>
+            <Button onClick={handleClose} variant="contained" color="secondary" size="large" className={classes.button}
+                    startIcon={<CloseIcon />}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
 
         <div className={classes.alignItems}>
-
-          <Button variant="contained" color="secondary" size="large" className={classes.button} disabled={disable || loading}
+          <Button variant="contained" color="secondary" size="large" className={classes.button} disabled={disable}
             startIcon={<SaveIcon />} onClick={saveData}>Guardar</Button>
-            {loading && <CircularProgress size={24} className={classes.buttonProgress} />}
+
+            {loading && <Backdrop className={classes.backdrop} open={loading}>
+                          <CircularProgress size={40} className={classes.buttonProgress}/>
+                        </Backdrop>
+            }
 
           <Button variant="contained" color="secondary" size="large" className={classes.button} disabled={disable}
             startIcon={<PrintIcon />} onClick={printScreen}>Imprimir</Button>
